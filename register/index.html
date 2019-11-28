@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="./style.css" type="text/css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="./lib/bignumber.min.js"></script>
+    <script type="text/javascript" src="./lib/web3-light.js"></script>
+    <script type="text/javascript" src="./contractabi.js"></script>
+    <script type="text/javascript" src="./lib/qrcode.js"></script>
+    <script type="text/javascript">
+      console.log("starting...");
+      //connect web3 and check if web3 is connected correctly
+      if (typeof web3 !== "undefined") {
+        web3 = new Web3(web3.currentProvider);
+      } else {
+        // set the provider you want from Web3.providers
+        web3 = new Web3(
+          new Web3.providers.HttpProvider("http://localhost:8545")
+        );
+      }
+
+      if (web3.isConnected()) {
+        console.log("connected");
+      } else {
+        console.log("not connected");
+        exit;
+      }
+
+      var contractAddress = "0x2f9d82fe8f58deabebe556aa6f774b9c3fac498b";
+      var vc = web3.eth.contract(abi).at(contractAddress);
+      var account = new Array();
+      var tableEvent = vc.Inst();
+      tableEvent.watch(function(error, result) {
+        if (!error) {
+          var Parent = document.getElementById("table1");
+          while (Parent.hasChildNodes()) {
+            Parent.removeChild(Parent.firstChild);
+          }
+          showList();
+        }
+      });
+
+      function makeCode(_account) {
+        let obj = _account;
+        let qrcode = new QRCode(document.getElementById("qrcode"), {
+          width: 250,
+          height: 250
+        });
+        qrcode.makeCode(obj);
+      }
+
+      function showList() {
+        var table = document.getElementById("table1");
+        var length = vc.getNumOfProducts();
+        var row = table.insertRow();
+        var cell1 = row.insertCell(0);
+        var cell2 = row.insertCell(1);
+        var cell3 = row.insertCell(2);
+        var cell4 = row.insertCell(3);
+        cell1.innerHTML = "ID";
+        cell2.innerHTML = "Password";
+        cell3.innerHTML = "Email";
+        cell4.innerHTML = "Account";
+        for (var i = 0; i < length; i++) {
+          var product = vc.getProductStruct(i);
+          var toString = product.toString();
+          // console.log("product: " + toString);
+          var strArray = toString.split(",");
+
+          var row = table.insertRow();
+          var cell1 = row.insertCell(0);
+          var cell2 = row.insertCell(1);
+          var cell3 = row.insertCell(2);
+          var cell4 = row.insertCell(3);
+          cell1.innerHTML = strArray[0];
+          cell2.innerHTML = strArray[1];
+          cell3.innerHTML = strArray[2];
+          cell4.innerHTML = strArray[3];
+        }
+      }
+
+      function addRegister() {
+        var pronumber = document.getElementById("id").value;
+        var proname = document.getElementById("password").value;
+        var subproname = document.getElementById("subpassword").value;
+        var proloc = document.getElementById("email").value;
+        var newaccount = web3.personal.newAccount(proname);
+        account.push(newaccount);
+        if (vc.checkAccount(pronumber) == true) {
+          if (proname.length >= 6 && subproname.length >= 6) {
+            if (vc.checkPassword(proname, subproname) == true) {
+              if (proloc.indexOf("@") != -1) {
+                if (web3.personal.unlockAccount(web3.eth.accounts[0], "1234")) {
+                  vc.addProStru(
+                    pronumber,
+                    proname,
+                    proloc,
+                    newaccount,
+                    { from: web3.eth.accounts[0], gas: 2000000 },
+                    function(err, result) {
+                      if (!err)
+                        alert(
+                          "트랜잭션이 성공적으로 전송되었습니다.\n" + result
+                        );
+                      makeCode(newaccount);
+                    }
+                  );
+                }
+              } else {
+                alert("정상적인 이메일 형식이 아닙니다");
+              }
+            } else {
+              alert("비밀번호가 일치하지 않습니다.");
+            }
+          } else {
+            alert("비밀번호가 6자리 이상으로 해야합나디.");
+          }
+        } else {
+          alert("아이디가 일치합니다. 생성을 취소합니다");
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <h1>회원가입</h1>
+    <br />
+    <div>
+      <input type="text" id="id" placeholder="ID" value="" />
+      <input
+        type="password"
+        id="password"
+        placeholder="비밀번호 입력"
+        value=""
+      />
+      <input
+        type="password"
+        id="subpassword"
+        placeholder="비밀번호 재입력"
+        value=""
+      />
+      <input type="text" id="email" placeholder="이메일 입력" value="" />
+      <button onClick="addRegister()">가입하기</button>
+    </div>
+    <table style="width:100%" id="table1"></table>
+
+    <div id="qrcode" style="width:250px; height:250px; margin-top:15px;"></div>
+    <script>
+      showList();
+    </script>
+  </body>
+</html>

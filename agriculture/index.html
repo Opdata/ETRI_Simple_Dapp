@@ -93,7 +93,7 @@
             pronumber,
             proname,
             proloc,
-            { from: account, gas: 2000000 },
+            { from: web3.eth.accounts[0], gas: 2000000 },
             function(err, result) {
               if (!err)
                 alert("트랜잭션이 성공적으로 전송되었습니다.\n" + result);
